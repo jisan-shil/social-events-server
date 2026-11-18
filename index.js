@@ -1,7 +1,9 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import { MongoClient, ServerApiVersion } from 'mongodb';
+import { getDb } from './db.js';
+import eventsRouter from './routes/events.js';
+import joinsRouter from './routes/joins.js';
 
 const app = express();
 
@@ -13,32 +15,18 @@ app.use(
 );
 app.use(express.json());
 
-const client = new MongoClient(process.env.MONGODB_URI, {
-  serverApi: {
-    version: ServerApiVersion.v1,
-    strict: true,
-    deprecationErrors: true,
-  },
-});
-
-let db;
-export async function getDb() {
-  if (!db) {
-    await client.connect();
-    db = client.db('socialEvents');
-  }
-  return db;
-}
-
 app.get('/', async (req, res) => {
   try {
-    const database = await getDb();
-    await database.command({ ping: 1 });
+    const db = await getDb();
+    await db.command({ ping: 1 });
     res.json({ message: 'Social Events API is running', db: 'connected' });
   } catch (err) {
     res.status(500).json({ message: 'Database connection failed' });
   }
 });
+
+app.use('/events', eventsRouter);
+app.use('/', joinsRouter);
 
 if (!process.env.VERCEL) {
   const port = process.env.PORT || 5000;
